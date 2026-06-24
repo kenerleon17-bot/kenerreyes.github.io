@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Gestión de Pensión</title>
+
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+<style>
+body {
+  font-family: Georgia;
+  background: linear-gradient(to bottom right, #eef3f8, #dce6f2);
+  margin: 0;
+}
+
+.titulo {
+  text-align: center;
+  font-size: 38px;
+  padding: 20px;
+  color: #2c3e50;
+}
+
+.container {
+  width: 92%;
+  margin: auto;
+  background: #fff;
+  padding: 20px;
+  border-radius: 10px;
+  border: 2px solid #c9d6e3;
+}
+
+input, select {
+  padding: 6px;
+  margin: 5px;
+  border-radius: 5px;
+  border: 1px solid #b0c4d4;
+}
+
+button {
+  background: #4a6fa5;
+  color: white;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #3a5c8a;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+}
+
+th {
+  background: #4a6fa5;
+  color: white;
+  padding: 10px;
+}
+
+td {
+  border: 1px solid #d3dde6;
+  padding: 6px;
+  text-align: center;
+}
+
+.factura-box {
+  width: 320px;
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="titulo">Gestión de Pensión</div>
+
+<div class="container">
+
+Mes:
+<select id="mes" onchange="cargarDatos()">
+<option value="enero">Enero</option>
+<option value="febrero">Febrero</option>
+<option value="marzo">Marzo</option>
+<option value="abril">Abril</option>
+<option value="mayo">Mayo</option>
+<option value="junio">Junio</option>
+<option value="julio">Julio</option>
+<option value="agosto">Agosto</option>
+<option value="septiembre">Septiembre</option>
+<option value="octubre">Octubre</option>
+<option value="noviembre">Noviembre</option>
+<option value="diciembre">Diciembre</option>
+</select>
+
+<br>
+
+Luz: <input type="number" id="luz" value="0">
+Agua: <input type="number" id="agua" value="0">
+Gas: <input type="number" id="gas" value="0">
+WiFi: <input type="number" id="wifi" value="0">
+<br>
+
+Nombre:
+<input type="text" id="nombre" onkeypress="crearFila(event)">
+
+<br>
+
+<button onclick="calcular()">Calcular</button>
+<button onclick="verHistorial()">Historial</button>
+<button onclick="guardarDatos()">Guardar</button>
+<button onclick="LimpiarDatos()">Limpiar</button>
+<button onclick="volverMenu()">Menú</button>
+
+<br>
+
+Filtro:
+<select id="filtroHistorial" onchange="verHistorial()">
+<option value="todos">Todos</option>
+<option value="deudores">Solo Deudores</option>
+</select>
+
+<table id="tabla">
+<tr>
+<th>#</th><th>Nombre</th><th>Hab</th><th>Arriendo</th>
+<th>Luz</th>
+<th>Agua</th>
+<th>Gas</th>
+<th>WiFi</th>
+<th>Total</th>
+<th>Estado</th><th>X</th><th>Factura</th>
+</tr>
+</table>
+
+<div id="historial" style="display:none;">
+<h3>Historial</h3>
+<table id="tablaHistorial"></table>
+</div>
+
+</div>
+
+<div id="factura" style="display:none;">
+<div class="factura-box">
+<h3>Factura</h3>
+<p id="f_nombre"></p>
+<p id="f_habitacion"></p>
+<p id="f_arriendo"></p>
+<p id="f_luz"></p>
+<p id="f_agua"></p>
+<p id="f_gas"></p>
+<p id="f_wifi"></p>
+<h4 id="f_total"></h4>
+</div>
+</div>
+
+<script>
+
+const nombreInput = document.getElementById("nombre");
+const tabla = document.getElementById("tabla");
+
+let inquilinos = JSON.parse(localStorage.getItem("inquilinos")) || {};
+
+// CREAR FILA
+function crearFila(e){
+if(e.key==="Enter"){
+e.preventDefault();
+
+let nombre = nombreInput.value.toLowerCase().trim();
+
+if(!inquilinos[nombre]){
+alert("No existe");
+return;
+}
+
+let d = inquilinos[nombre];
+
+let fila = tabla.insertRow();
+
+let usaWifi = ["andres","leandro","julian"].includes(nombre);
+
+fila.innerHTML = `
+<td>${tabla.rows.length-1}</td>
+<td>${nombre}</td>
+<td>${d.habitacion}</td>
+<td>${d.arriendo}</td>
+<td></td>
+<td></td>
+<td></td>
+<td>${usaWifi ? "$0" : "-"}</td>
+<td></td>
+<td>
+<select onchange="guardarDatos()">
+<option>Pendiente</option>
+<option>Pagado</option>
+</select>
+</td>
+<td><button onclick="eliminarFila(this)">X</button></td>
+<td><button onclick="factura(this)">Ver</button></td>
+`;
+
+nombreInput.value="";
+guardarDatos();
+}
+}
+
+// CALCULAR
+function calcular(){
+
+    let filas = document.querySelectorAll("#tabla tr");
+    let totalP = 0;
+
+    for(let i=1; i<filas.length; i++){
+        totalP += parseInt(filas[i].dataset.personas) || 1;
+    }
+
+    let luzU = Number(luz.value) / totalP;
+    let aguaU = Number(agua.value) / totalP;
+    let gasU = Number(gas.value) / totalP;
+
+    // WIFI
+    let wifiTotal = Number(document.getElementById("wifi").value);
+
+    // Andrés vale 2, Leandro y Julián 1
+    let wifiPartes = {
+        "andres": 2,
+        "leandro": 1,
+        "julian": 1
+    };
+
+    let totalPartesWifi = 4;
+
+    for(let i=1; i<filas.length; i++){
+
+        let c = filas[i].children;
+
+        let nombre = c[1].innerText
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "");
+
+        let p = filas[i].dataset.personas || 1;
+
+        let wifiValor = 0;
+
+        // Calculamos el wifi correcto usando tu objeto wifiPartes
+        if(wifiPartes[nombre]){
+            wifiValor = (wifiTotal / totalPartesWifi) * wifiPartes[nombre];
+        }
+
+        // Sumamos todo incluyendo el wifiValor ya calculado
+        let total =
+            (parseFloat(c[3].innerText) || 0)
+            + (luzU * p)
+            + (aguaU * p)
+            + (gasU * p)
+            + wifiValor;
+
+        // Inyectamos los valores en las celdas correspondientes
+        c[4].innerText = (luzU*p).toFixed(0);
+        c[5].innerText = (aguaU*p).toFixed(0);
+        c[6].innerText = (gasU*p).toFixed(0);
+
+        c[7].innerText = wifiValor > 0
+            ? wifiValor.toFixed(0)
+            : "-";
+
+        c[8].innerText = total.toFixed(0);
+    }
+
+    guardarDatos();
+}
+
+// FACTURA
+function factura(btn){
+let c = btn.parentNode.parentNode.children;
+
+f_nombre.innerText = c[1].innerText;
+f_habitacion.innerText = "Hab: " + c[2].innerText;
+f_arriendo.innerText = "Arriendo: $" + c[3].innerText;
+f_luz.innerText = "Luz: $" + c[4].innerText;
+f_agua.innerText = "Agua: $" + c[5].innerText;
+f_gas.innerText = "Gas: $" + c[6].innerText;
+f_wifi.innerText = "WiFi: $" + c[7].innerText;
+f_total.innerText = "TOTAL: $" + c[8].innerText;
+
+let box = document.querySelector(".factura-box");
+
+document.getElementById("factura").style.display="block";
+
+setTimeout(()=>{
+html2canvas(box,{scale:2}).then(canvas=>{
+let link=document.createElement("a");
+link.download="factura.png";
+link.href=canvas.toDataURL();
+link.click();
+document.getElementById("factura").style.display="none";
+});
+},100);
+}
+
+// ELIMINAR
+function eliminarFila(btn){
+btn.parentNode.parentNode.remove();
+guardarDatos();
+}
+
+// GUARDAR
+function guardarDatos(){
+let mes = document.getElementById("mes").value;
+
+let filas=document.querySelectorAll("#tabla tr");
+let data=[];
+
+for(let i=1;i<filas.length;i++){
+let c=filas[i].children;
+
+data.push({
+nombre:c[1].innerText,
+habitacion:c[2].innerText,
+arriendo:c[3].innerText,
+luz:c[4].innerText,
+agua:c[5].innerText,
+gas:c[6].innerText,
+wifi:c[7].innerText,
+total:c[8].innerText,
+estado:c[9].querySelector("select").value,
+personas: filas[i].dataset.personas || 1
+});
+}
+
+localStorage.setItem("pension_"+mes, JSON.stringify({
+filas:data,
+luz:luz.value,
+agua:agua.value,
+gas:gas.value,
+wifi:document.getElementById("wifi").value
+}));
+}
+
+// CARGAR
+function cargarDatos(){
+let mes = document.getElementById("mes").value;
+let datos=JSON.parse(localStorage.getItem("pension_"+mes));
+
+tabla.innerHTML = tabla.rows[0].outerHTML;
+
+if(!datos) return;
+
+luz.value=datos.luz;
+agua.value=datos.agua;
+gas.value=datos.gas;
+document.getElementById("wifi").value = datos.wifi || 0;
+
+datos.filas.forEach((f,i)=>{
+let fila=tabla.insertRow();
+
+fila.dataset.personas = f.personas || 1;
+
+fila.innerHTML=`
+<td>${i+1}</td>
+<td>${f.nombre}</td>
+<td>${f.habitacion}</td>
+<td>${f.arriendo}</td>
+<td>${f.luz}</td>
+<td>${f.agua}</td>
+<td>${f.gas}</td>
+<td>${f.wifi || 0}</td>
+<td>${f.total}</td>
+<td>
+<select onchange="guardarDatos()">
+<option ${f.estado==="Pendiente"?"selected":""}>Pendiente</option>
+<option ${f.estado==="Pagado"?"selected":""}>Pagado</option>
+</select>
+</td>
+<td><button onclick="eliminarFila(this)">X</button></td>
+<td><button onclick="factura(this)">Ver</button></td>
+`;
+});
+}
+
+// HISTORIAL
+function verHistorial(){
+
+let filtro = document.getElementById("filtroHistorial").value;
+
+let meses=["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+
+let tablaHist = document.getElementById("tablaHistorial");
+
+tablaHist.innerHTML = `
+<tr>
+<th>Inquilino</th>
+<th>Mes</th>
+<th>Total</th>
+<th>Estado</th>
+<th>Acción</th>
+</tr>
+`;
+
+meses.forEach(m=>{
+let datos = JSON.parse(localStorage.getItem("pension_"+m));
+if(!datos) return;
+
+datos.filas.forEach((f, index)=>{
+
+if(filtro==="deudores" && f.estado==="Pagado") return;
+
+let fila = tablaHist.insertRow();
+
+fila.style.background = f.estado==="Pagado" ? "#d4edda" : "#f8d7da";
+
+fila.innerHTML = `
+<td>${f.nombre}</td>
+<td>${m}</td>
+<td>$${f.total}</td>
+<td>${f.estado}</td>
+<td>
+${f.estado==="Pendiente"
+? `<button onclick="marcarPagado('${m}',${index})">✔</button>`
+: "✔"}
+</td>
+`;
+});
+
+});
+
+document.getElementById("historial").style.display = "block";
+}
+
+// MARCAR PAGADO
+function marcarPagado(mes, index){
+let datos = JSON.parse(localStorage.getItem("pension_"+mes));
+datos.filas[index].estado="Pagado";
+localStorage.setItem("pension_"+mes, JSON.stringify(datos));
+verHistorial();
+cargarDatos();
+}
+
+// LIMPIAR
+function LimpiarDatos(){
+if(confirm("¿Seguro?")){
+localStorage.removeItem("pension_"+document.getElementById("mes").value);
+cargarDatos();
+}
+}
+
+// VOLVER
+function volverMenu(){
+window.location.href="menu.html";
+}
+
+// INICIO
+cargarDatos();
+
+</script>
+<script>
+// 🔥 SOLUCIÓN REAL DE FOCO PARA ELECTRON
+
+function recuperarFoco() {
+  let input = document.querySelector("input:focus");
+
+  if (!input) {
+    let primero = document.querySelector("input, select");
+    if (primero) primero.focus();
+  }
+}
+
+// cuando hacés click en cualquier lado
+document.addEventListener("click", () => {
+  setTimeout(recuperarFoco, 10);
+});
+
+// cuando cambia algo
+document.addEventListener("change", () => {
+  setTimeout(recuperarFoco, 10);
+});
+
+// cuando la ventana vuelve
+window.addEventListener("focus", recuperarFoco);
+
+// al cargar
+window.addEventListener("load", recuperarFoco);
+</script>
+</script>
+</body>
+</html>

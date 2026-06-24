@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Panel Principal</title>
+
+<style>
+body {
+  font-family: "Georgia", serif;
+  background: linear-gradient(to bottom right, #eef3f8, #dce6f2);
+  margin: 0;
+  text-align: center;
+}
+
+/* TÍTULO */
+h1 {
+  margin-top: 60px;
+  font-size: 40px;
+  color: #2c3e50;
+  animation: aparecer 1s ease;
+}
+
+/* CONTENEDOR */
+.menu {
+  margin-top: 80px;
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  flex-wrap: wrap;
+}
+
+/* BOTONES */
+.card {
+  background: #ffffff;
+  border: 2px solid #c9d6e3;
+  padding: 30px;
+  width: 220px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  animation: subir 0.8s ease;
+}
+
+.card:hover {
+  transform: translateY(-10px) scale(1.03);
+  background: #f5f9fd;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+}
+
+/* TEXTO BOTÓN */
+.card h2 {
+  color: #4a6fa5;
+  margin-bottom: 10px;
+}
+
+.card p {
+  color: #5c6f82;
+  font-size: 14px;
+}
+
+/* BOTÓN CERRAR SESIÓN */
+.logout {
+  margin-top: 60px;
+}
+
+.logout button {
+  background: #4a6fa5;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.logout button:hover {
+  background: #3a5c8a;
+}
+
+/* ANIMACIONES */
+@keyframes aparecer {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes subir {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+</style>
+
+</head>
+
+<body>
+
+<h1>Panel Principal</h1>
+
+<div class="menu">
+
+  <div class="card" onclick="irPension()">
+    <h2>Pensión</h2>
+    <p>Gestión completa de inquilinos y pagos</p>
+  </div>
+
+  <div class="card" onclick="irOfice()">
+    <h2>Oficina</h2>
+    <p>Administración de servicios y registros</p>
+  </div>
+
+  <div class="card" onclick="irInquilinos()">
+    <h2>Inquilinos</h2>
+    <p>Agregar y editar información</p>
+  </div>
+
+</div>
+
+<div class="logout">
+  <button onclick="logout()">Cerrar Sesión</button>
+</div>
+
+<script>
+function irInquilinos(){
+  window.location.href = "inquilinos.html";
+}
+
+function irPension(){
+  window.location.href = "pension.html";
+}
+
+function irOfice(){
+  window.location.href = "ofice.html";
+}
+
+function logout(){
+  localStorage.removeItem("usuarioActivo");
+  window.location.href = "login.html";
+}
+</script>
+<script>
+// 🔥 SOLUCIÓN REAL DE FOCO PARA ELECTRON
+
+function recuperarFoco() {
+  let input = document.querySelector("input:focus");
+
+  if (!input) {
+    let primero = document.querySelector("input, select");
+    if (primero) primero.focus();
+  }
+}
+
+// cuando hacés click en cualquier lado
+document.addEventListener("click", () => {
+  setTimeout(recuperarFoco, 10);
+});
+
+// cuando cambia algo
+document.addEventListener("change", () => {
+  setTimeout(recuperarFoco, 10);
+});
+
+// cuando la ventana vuelve
+window.addEventListener("focus", recuperarFoco);
+
+// al cargar
+window.addEventListener("load", recuperarFoco);
+</script>
+<script>
+</script>
+</body>
+</html>

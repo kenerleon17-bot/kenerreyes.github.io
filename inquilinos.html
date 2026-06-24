@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Gestión de Inquilinos</title>
+
+<style>
+body {
+  font-family: "Georgia", serif;
+  background: linear-gradient(to bottom right, #eef3f8, #dce6f2);
+  margin: 0;
+}
+
+/* TITULO */
+h1 {
+  text-align: center;
+  font-size: 38px;
+  padding: 20px;
+  color: #2c3e50;
+}
+
+/* CONTENEDOR */
+.container {
+  width: 92%;
+  margin: auto;
+  background: #ffffff;
+  padding: 20px;
+  border-radius: 10px;
+  border: 2px solid #c9d6e3;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+}
+
+/* BLOQUES */
+.bloque {
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+/* INPUTS */
+input {
+  padding: 6px;
+  margin: 5px;
+  border: 1px solid #b0c4d4;
+  border-radius: 5px;
+  background: #f8fbff;
+}
+
+/* BOTONES */
+button {
+  background: #4a6fa5;
+  color: white;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  margin: 5px;
+  transition: 0.3s;
+}
+
+button:hover {
+  background: #3a5c8a;
+  transform: translateY(-2px);
+}
+
+/* TABLA */
+table {
+  width: 100%;
+  margin-top: 15px;
+  border-collapse: collapse;
+}
+
+th {
+  background: #4a6fa5;
+  color: white;
+  padding: 10px;
+}
+
+td {
+  border: 1px solid #d3dde6;
+  padding: 6px;
+  text-align: center;
+}
+
+tr:nth-child(even) {
+  background: #f5f9fd;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Gestión de Inquilinos</h1>
+
+<div class="container">
+
+  <!-- FORM -->
+  <div class="bloque">
+    Nombre: <input type="text" id="nombre">
+    Habitación: <input type="text" id="habitacion">
+    Arriendo: <input type="number" id="arriendo">
+    Personas: <input type="number" id="personas" value="1">
+  </div>
+
+  <div class="bloque">
+    <button onclick="agregar()">Agregar</button>
+    <button onclick="volverMenu()">Volver al Menú</button>
+  </div>
+
+  <!-- TABLA -->
+  <table id="tabla">
+    <tr>
+      <th>#</th>
+      <th>Nombre</th>
+      <th>Habitación</th>
+      <th>Arriendo</th>
+      <th>Personas</th>
+      <th>Acción</th>
+    </tr>
+  </table>
+
+</div>
+
+<script>
+
+// AGREGAR
+function agregar(){
+  let nombre = document.getElementById("nombre").value.trim().toLowerCase();
+  let habitacion = document.getElementById("habitacion").value;
+  let arriendo = document.getElementById("arriendo").value;
+  let personas = document.getElementById("personas").value || 1;
+
+  if(!nombre) return alert("Falta nombre");
+
+  let datos = JSON.parse(localStorage.getItem("inquilinos")) || {};
+
+  datos[nombre] = {
+    habitacion: habitacion,
+    arriendo: parseFloat(arriendo),
+    personas: parseInt(personas)
+  };
+
+  localStorage.setItem("inquilinos", JSON.stringify(datos));
+
+  cargar();
+  limpiar();
+}
+
+// CARGAR
+function cargar(){
+  let datos = JSON.parse(localStorage.getItem("inquilinos")) || {};
+  let tabla = document.getElementById("tabla");
+
+  tabla.innerHTML = `
+    <tr>
+      <th>#</th><th>Nombre</th><th>Habitación</th>
+      <th>Arriendo</th><th>Personas</th><th>Acción</th>
+    </tr>
+  `;
+
+  let i = 1;
+
+  for(let n in datos){
+    let fila = tabla.insertRow();
+
+    fila.innerHTML = `
+      <td>${i++}</td>
+      <td>${n}</td>
+      <td>${datos[n].habitacion}</td>
+      <td>${datos[n].arriendo}</td>
+      <td>${datos[n].personas}</td>
+      <td><button onclick="eliminar('${n}')">Eliminar</button></td>
+    `;
+  }
+}
+
+// ELIMINAR
+function eliminar(nombre){
+  let datos = JSON.parse(localStorage.getItem("inquilinos")) || {};
+  delete datos[nombre];
+
+  localStorage.setItem("inquilinos", JSON.stringify(datos));
+  cargar();
+}
+
+// LIMPIAR
+function limpiar(){
+  document.getElementById("nombre").value="";
+  document.getElementById("habitacion").value="";
+  document.getElementById("arriendo").value="";
+  document.getElementById("personas").value=1;
+}
+
+// VOLVER
+function volverMenu(){
+  window.location.href = "menu.html";
+}
+
+// INICIO
+window.onload = cargar;
+
+</script>
+
+</body>
+</html>
