@@ -126,6 +126,7 @@ Filtro:
 </select>
 
 <table id="tabla">
+<thead>
 <tr>
 <th>#</th><th>Nombre</th><th>Hab</th><th>Arriendo</th>
 <th>Luz</th>
@@ -135,6 +136,8 @@ Filtro:
 <th>Total</th>
 <th>Estado</th><th>X</th><th>Factura</th>
 </tr>
+</thead>
+<tbody id="tablaCuerpo"></tbody>
 </table>
 
 <div id="historial" style="display:none;">
@@ -161,9 +164,19 @@ Filtro:
 <script>
 
 const nombreInput = document.getElementById("nombre");
-const tabla = document.getElementById("tabla");
+const tablaCuerpo = document.getElementById("tablaCuerpo");
 
-let inquilinos = JSON.parse(localStorage.getItem("inquilinos")) || {};
+let inquilinos = JSON.parse(localStorage.getItem("inquilinos"));
+
+// Si la base local de inquilinos está vacía, la inicializamos con las personas correctas
+if (!inquilinos) {
+    inquilinos = {
+        "andres": { habitacion: "1", arriendo: 150000, personas: 2 },
+        "leandro": { habitacion: "2", arriendo: 140000, personas: 1 },
+        "julian": { habitacion: "3", arriendo: 140000, personas: 1 }
+    };
+    localStorage.setItem("inquilinos", JSON.stringify(inquilinos));
+}
 
 // CREAR FILA
 function crearFila(e){
@@ -173,26 +186,28 @@ e.preventDefault();
 let nombre = nombreInput.value.toLowerCase().trim();
 
 if(!inquilinos[nombre]){
-alert("No existe");
+alert("No existe el inquilino " + nombre);
 return;
 }
 
 let d = inquilinos[nombre];
+let fila = tablaCuerpo.insertRow();
 
-let fila = tabla.insertRow();
+// Vinculamos la cantidad de personas correspondiente a la fila del HTML
+fila.dataset.personas = d.personas || 1;
 
 let usaWifi = ["andres","leandro","julian"].includes(nombre);
 
 fila.innerHTML = `
-<td>${tabla.rows.length-1}</td>
+<td>${tablaCuerpo.rows.length}</td>
 <td>${nombre}</td>
 <td>${d.habitacion}</td>
 <td>${d.arriendo}</td>
-<td></td>
-<td></td>
-<td></td>
-<td>${usaWifi ? "$0" : "-"}</td>
-<td></td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>${usaWifi ? "0" : "-"}</td>
+<td>-</td>
 <td>
 <select onchange="guardarDatos()">
 <option>Pendiente</option>
@@ -210,17 +225,19 @@ guardarDatos();
 
 // CALCULAR
 function calcular(){
-
-    let filas = document.querySelectorAll("#tabla tr");
+    let filas = tablaCuerpo.rows;
     let totalP = 0;
 
-    for(let i=1; i<filas.length; i++){
+    // Sumamos todas las personas de las habitaciones cargadas en la lista
+    for(let i=0; i<filas.length; i++){
         totalP += parseInt(filas[i].dataset.personas) || 1;
     }
 
-    let luzU = Number(luz.value) / totalP;
-    let aguaU = Number(agua.value) / totalP;
-    let gasU = Number(gas.value) / totalP;
+    if(totalP === 0) totalP = 1;
+
+    let luzU = Number(document.getElementById("luz").value) / totalP;
+    let aguaU = Number(document.getElementById("agua").value) / totalP;
+    let gasU = Number(document.getElementById("gas").value) / totalP;
 
     // WIFI
     let wifiTotal = Number(document.getElementById("wifi").value);
@@ -234,25 +251,25 @@ function calcular(){
 
     let totalPartesWifi = 4;
 
-    for(let i=1; i<filas.length; i++){
-
+    for(let i=0; i<filas.length; i++){
         let c = filas[i].children;
 
         let nombre = c[1].innerText
             .toLowerCase()
+            .trim()
             .normalize("NFD")
             .replace(/[\u0300-\u036f]/g, "");
 
-        let p = filas[i].dataset.personas || 1;
+        let p = parseInt(filas[i].dataset.personas) || 1;
 
         let wifiValor = 0;
 
-        // Calculamos el wifi correcto usando tu objeto wifiPartes
+        // Calculamos el wifi proporcional usando el objeto wifiPartes
         if(wifiPartes[nombre]){
             wifiValor = (wifiTotal / totalPartesWifi) * wifiPartes[nombre];
         }
 
-        // Sumamos todo incluyendo el wifiValor ya calculado
+        // Multiplicamos el valor unitario por la cantidad de personas de esta fila (p)
         let total =
             (parseFloat(c[3].innerText) || 0)
             + (luzU * p)
@@ -260,14 +277,14 @@ function calcular(){
             + (gasU * p)
             + wifiValor;
 
-        // Inyectamos los valores en las celdas correspondientes
-        c[4].innerText = (luzU*p).toFixed(0);
-        c[5].innerText = (aguaU*p).toFixed(0);
-        c[6].innerText = (gasU*p).toFixed(0);
+        // Inyectamos los valores calculados en las celdas correspondientes
+        c[4].innerText = (luzU * p).toFixed(0);
+        c[5].innerText = (aguaU * p).toFixed(0);
+        c[6].innerText = (gasU * p).toFixed(0);
 
         c[7].innerText = wifiValor > 0
             ? wifiValor.toFixed(0)
-            : "-";
+            : "0";
 
         c[8].innerText = total.toFixed(0);
     }
@@ -312,11 +329,10 @@ guardarDatos();
 // GUARDAR
 function guardarDatos(){
 let mes = document.getElementById("mes").value;
-
-let filas=document.querySelectorAll("#tabla tr");
+let filas = tablaCuerpo.rows;
 let data=[];
 
-for(let i=1;i<filas.length;i++){
+for(let i=0; i<filas.length; i++){
 let c=filas[i].children;
 
 data.push({
@@ -335,9 +351,9 @@ personas: filas[i].dataset.personas || 1
 
 localStorage.setItem("pension_"+mes, JSON.stringify({
 filas:data,
-luz:luz.value,
-agua:agua.value,
-gas:gas.value,
+luz:document.getElementById("luz").value,
+agua:document.getElementById("agua").value,
+gas:document.getElementById("gas").value,
 wifi:document.getElementById("wifi").value
 }));
 }
@@ -347,17 +363,23 @@ function cargarDatos(){
 let mes = document.getElementById("mes").value;
 let datos=JSON.parse(localStorage.getItem("pension_"+mes));
 
-tabla.innerHTML = tabla.rows[0].outerHTML;
+tablaCuerpo.innerHTML = ""; // Limpiamos las filas viejas, la cabecera queda fija intacta
 
-if(!datos) return;
+if(!datos) {
+    document.getElementById("luz").value = 0;
+    document.getElementById("agua").value = 0;
+    document.getElementById("gas").value = 0;
+    document.getElementById("wifi").value = 0;
+    return;
+}
 
-luz.value=datos.luz;
-agua.value=datos.agua;
-gas.value=datos.gas;
+document.getElementById("luz").value=datos.luz || 0;
+document.getElementById("agua").value=datos.agua || 0;
+document.getElementById("gas").value=datos.gas || 0;
 document.getElementById("wifi").value = datos.wifi || 0;
 
 datos.filas.forEach((f,i)=>{
-let fila=tabla.insertRow();
+let fila=tablaCuerpo.insertRow();
 
 fila.dataset.personas = f.personas || 1;
 
@@ -385,11 +407,8 @@ fila.innerHTML=`
 
 // HISTORIAL
 function verHistorial(){
-
 let filtro = document.getElementById("filtroHistorial").value;
-
 let meses=["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
-
 let tablaHist = document.getElementById("tablaHistorial");
 
 tablaHist.innerHTML = `
@@ -407,11 +426,9 @@ let datos = JSON.parse(localStorage.getItem("pension_"+m));
 if(!datos) return;
 
 datos.filas.forEach((f, index)=>{
-
 if(filtro==="deudores" && f.estado==="Pagado") return;
 
 let fila = tablaHist.insertRow();
-
 fila.style.background = f.estado==="Pagado" ? "#d4edda" : "#f8d7da";
 
 fila.innerHTML = `
@@ -426,7 +443,6 @@ ${f.estado==="Pendiente"
 </td>
 `;
 });
-
 });
 
 document.getElementById("historial").style.display = "block";
@@ -460,32 +476,17 @@ cargarDatos();
 </script>
 <script>
 // 🔥 SOLUCIÓN REAL DE FOCO PARA ELECTRON
-
 function recuperarFoco() {
   let input = document.querySelector("input:focus");
-
   if (!input) {
     let primero = document.querySelector("input, select");
     if (primero) primero.focus();
   }
 }
-
-// cuando hacés click en cualquier lado
-document.addEventListener("click", () => {
-  setTimeout(recuperarFoco, 10);
-});
-
-// cuando cambia algo
-document.addEventListener("change", () => {
-  setTimeout(recuperarFoco, 10);
-});
-
-// cuando la ventana vuelve
+document.addEventListener("click", () => { setTimeout(recuperarFoco, 10); });
+document.addEventListener("change", () => { setTimeout(recuperarFoco, 10); });
 window.addEventListener("focus", recuperarFoco);
-
-// al cargar
 window.addEventListener("load", recuperarFoco);
-</script>
 </script>
 </body>
 </html>
