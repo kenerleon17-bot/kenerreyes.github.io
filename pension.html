@@ -166,17 +166,8 @@ Filtro:
 const nombreInput = document.getElementById("nombre");
 const tablaCuerpo = document.getElementById("tablaCuerpo");
 
-let inquilinos = JSON.parse(localStorage.getItem("inquilinos"));
-
-// Si la base local de inquilinos está vacía, la inicializamos con las personas correctas
-if (!inquilinos) {
-    inquilinos = {
-        "andres": { habitacion: "1", arriendo: 150000, personas: 2 },
-        "leandro": { habitacion: "2", arriendo: 140000, personas: 1 },
-        "julian": { habitacion: "3", arriendo: 140000, personas: 1 }
-    };
-    localStorage.setItem("inquilinos", JSON.stringify(inquilinos));
-}
+// LEE DIRECTAMENTE LOS INQUILINOS DESDE LA BASE DEL LOCALSTORAGE
+let inquilinos = JSON.parse(localStorage.getItem("inquilinos")) || {};
 
 // CREAR FILA
 function crearFila(e){
@@ -193,8 +184,8 @@ return;
 let d = inquilinos[nombre];
 let fila = tablaCuerpo.insertRow();
 
-// Vinculamos la cantidad de personas correspondiente a la fila del HTML
-fila.dataset.personas = d.personas || 1;
+// 🔥 ASIGNA CORRECTAMENTE LA CANTIDAD DE PERSONAS DESDE TU BASE DE DATOS
+fila.dataset.personas = parseInt(d.personas) || 1;
 
 let usaWifi = ["andres","leandro","julian"].includes(nombre);
 
@@ -228,7 +219,7 @@ function calcular(){
     let filas = tablaCuerpo.rows;
     let totalP = 0;
 
-    // Sumamos todas las personas de las habitaciones cargadas en la lista
+    // Sumamos la cantidad de personas REALES de las filas en pantalla
     for(let i=0; i<filas.length; i++){
         totalP += parseInt(filas[i].dataset.personas) || 1;
     }
@@ -242,7 +233,7 @@ function calcular(){
     // WIFI
     let wifiTotal = Number(document.getElementById("wifi").value);
 
-    // Andrés vale 2, Leandro y Julián 1
+    // Reparto fijo para el WiFi (4 partes totales)
     let wifiPartes = {
         "andres": 2,
         "leandro": 1,
@@ -261,15 +252,13 @@ function calcular(){
             .replace(/[\u0300-\u036f]/g, "");
 
         let p = parseInt(filas[i].dataset.personas) || 1;
-
         let wifiValor = 0;
 
-        // Calculamos el wifi proporcional usando el objeto wifiPartes
         if(wifiPartes[nombre]){
             wifiValor = (wifiTotal / totalPartesWifi) * wifiPartes[nombre];
         }
 
-        // Multiplicamos el valor unitario por la cantidad de personas de esta fila (p)
+        // Multiplicamos cada servicio unitario por la cantidad de personas (p) de esta fila
         let total =
             (parseFloat(c[3].innerText) || 0)
             + (luzU * p)
@@ -277,15 +266,11 @@ function calcular(){
             + (gasU * p)
             + wifiValor;
 
-        // Inyectamos los valores calculados en las celdas correspondientes
         c[4].innerText = (luzU * p).toFixed(0);
         c[5].innerText = (aguaU * p).toFixed(0);
         c[6].innerText = (gasU * p).toFixed(0);
 
-        c[7].innerText = wifiValor > 0
-            ? wifiValor.toFixed(0)
-            : "0";
-
+        c[7].innerText = wifiValor > 0 ? wifiValor.toFixed(0) : "0";
         c[8].innerText = total.toFixed(0);
     }
 
@@ -345,7 +330,7 @@ gas:c[6].innerText,
 wifi:c[7].innerText,
 total:c[8].innerText,
 estado:c[9].querySelector("select").value,
-personas: filas[i].dataset.personas || 1
+personas: parseInt(filas[i].dataset.personas) || 1
 });
 }
 
@@ -363,7 +348,7 @@ function cargarDatos(){
 let mes = document.getElementById("mes").value;
 let datos=JSON.parse(localStorage.getItem("pension_"+mes));
 
-tablaCuerpo.innerHTML = ""; // Limpiamos las filas viejas, la cabecera queda fija intacta
+tablaCuerpo.innerHTML = ""; 
 
 if(!datos) {
     document.getElementById("luz").value = 0;
@@ -381,7 +366,8 @@ document.getElementById("wifi").value = datos.wifi || 0;
 datos.filas.forEach((f,i)=>{
 let fila=tablaCuerpo.insertRow();
 
-fila.dataset.personas = f.personas || 1;
+// 🔥 AQUÍ ESTABA EL ERROR: Ahora al cargar los datos del mes, le vuelve a inyectar a la fila las personas que le corresponden
+fila.dataset.personas = parseInt(f.personas) || 1;
 
 fila.innerHTML=`
 <td>${i+1}</td>
@@ -471,6 +457,8 @@ window.location.href="menu.html";
 }
 
 // INICIO
+// Nos aseguramos de volver a pedir los inquilinos actualizados antes de cargar
+inquilinos = JSON.parse(localStorage.getItem("inquilinos")) || {};
 cargarDatos();
 
 </script>
